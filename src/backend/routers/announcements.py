@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..database import announcements_collection, teachers_collection
@@ -41,22 +41,32 @@ def parse_iso_date(label: str, value: str) -> date:
         ) from exc
 
 
-def ensure_valid_date_window(starts_at: Optional[str], expires_at: str) -> None:
+def ensure_valid_date_window(starts_at: Optional[str], expires_at: str) -> Optional[str]:
+    """Validate the date window and return the normalised starts_at value.
+
+    Empty or whitespace-only strings are treated as None (no start date).
+    """
+    # Normalise empty / whitespace-only strings to None
+    if starts_at is not None:
+        starts_at = starts_at.strip() or None
+
     expiry_date = parse_iso_date("expires_at", expires_at)
-    if starts_at:
+    if starts_at is not None:
         start_date = parse_iso_date("starts_at", starts_at)
         if start_date > expiry_date:
             raise HTTPException(
                 status_code=400,
                 detail="starts_at must be on or before expires_at."
             )
+    return starts_at
 
 
-def require_authenticated_teacher(username: Optional[str]) -> Dict[str, Any]:
-    if not username:
+def require_authenticated_teacher(request: Request) -> Dict[str, Any]:
+    session_user = request.cookies.get("session_user")
+    if not session_user:
         raise HTTPException(status_code=401, detail="Authentication required for this action")
 
-    teacher = teachers_collection.find_one({"_id": username})
+    teacher = teachers_collection.find_one({"_id": session_user})
     if not teacher:
         raise HTTPException(status_code=401, detail="Invalid teacher credentials")
 
@@ -100,19 +110,19 @@ def get_active_announcements() -> List[Dict[str, Any]]:
 
 
 @router.get("/manage", response_model=List[Dict[str, Any]])
-def list_all_announcements(teacher_username: str = Query(...)) -> List[Dict[str, Any]]:
+def list_all_announcements(request: Request) -> List[Dict[str, Any]]:
     """List all announcements for management (requires authentication)."""
-    require_authenticated_teacher(teacher_username)
+    require_authenticated_teacher(request)
 
     cursor = announcements_collection.find({}).sort("expires_at", 1)
     return [serialize_announcement(doc) for doc in cursor]
 
 
 @router.post("", response_model=Dict[str, Any])
-def create_announcement(payload: AnnouncementCreate, teacher_username: str = Query(...)) -> Dict[str, Any]:
+def create_announcement(payload: AnnouncementCreate, request: Request) -> Dict[str, Any]:
     """Create an announcement (requires authentication)."""
-    require_authenticated_teacher(teacher_username)
-    ensure_valid_date_window(payload.starts_at, payload.expires_at)
+    require_authenticated_teacher(request)
+    normalized_starts_at = ensure_valid_date_window(payload.starts_at, payload.expires_at)
 
     insert_doc: Dict[str, Any] = {
         "title": payload.title.strip(),
@@ -120,8 +130,8 @@ def create_announcement(payload: AnnouncementCreate, teacher_username: str = Que
         "expires_at": payload.expires_at
     }
 
-    if payload.starts_at:
-        insert_doc["starts_at"] = payload.starts_at
+    if normalized_starts_at:
+        insert_doc["starts_at"] = normalized_starts_at
 
     result = announcements_collection.insert_one(insert_doc)
     created = announcements_collection.find_one({"_id": result.inserted_id})
@@ -135,10 +145,10 @@ def create_announcement(payload: AnnouncementCreate, teacher_username: str = Que
 def update_announcement(
     announcement_id: str,
     payload: AnnouncementUpdate,
-    teacher_username: str = Query(...)
+    request: Request
 ) -> Dict[str, Any]:
     """Update an existing announcement (requires authentication)."""
-    require_authenticated_teacher(teacher_username)
+    require_authenticated_teacher(request)
 
     current = announcements_collection.find_one(announcement_id_query(announcement_id))
     if not current:
@@ -152,7 +162,8 @@ def update_announcement(
     if payload.expires_at is not None:
         updates["expires_at"] = payload.expires_at
     if payload.starts_at is not None:
-        updates["starts_at"] = payload.starts_at
+        # Normalise whitespace-only strings to None (remove start date)
+        updates["starts_at"] = payload.starts_at.strip() or None
 
     if not updates:
         raise HTTPException(status_code=400, detail="No changes provided")
@@ -177,9 +188,9 @@ def update_announcement(
 
 
 @router.delete("/{announcement_id}")
-def delete_announcement(announcement_id: str, teacher_username: str = Query(...)) -> Dict[str, str]:
+def delete_announcement(announcement_id: str, request: Request) -> Dict[str, str]:
     """Delete an announcement (requires authentication)."""
-    require_authenticated_teacher(teacher_username)
+    require_authenticated_teacher(request)
 
     result = announcements_collection.delete_one(announcement_id_query(announcement_id))
     if result.deleted_count == 0:
