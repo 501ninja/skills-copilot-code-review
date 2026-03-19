@@ -107,11 +107,19 @@ document.addEventListener("DOMContentLoaded", () => {
           )}`
         : `Until ${formatAnnouncementDate(announcement.expires_at)}`;
 
-      card.innerHTML = `
-        <div class="announcement-date">${dateText}</div>
-        <h4>${announcement.title}</h4>
-        <p>${announcement.message}</p>
-      `;
+      const dateDiv = document.createElement("div");
+      dateDiv.className = "announcement-date";
+      dateDiv.textContent = dateText;
+
+      const titleEl = document.createElement("h4");
+      titleEl.textContent = announcement.title;
+
+      const messageEl = document.createElement("p");
+      messageEl.textContent = announcement.message;
+
+      card.appendChild(dateDiv);
+      card.appendChild(titleEl);
+      card.appendChild(messageEl);
 
       announcementsList.appendChild(card);
     });
@@ -179,20 +187,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const item = document.createElement("div");
       item.className = "announcement-manager-item";
-      item.innerHTML = `
-        <div class="announcement-manager-item-content">
-          <h5>${announcement.title}</h5>
-          <p>${announcement.message}</p>
-          <div class="announcement-manager-dates">
-            <span>Starts: ${startsLabel}</span>
-            <span>Expires: ${formatAnnouncementDate(announcement.expires_at)}</span>
-          </div>
-        </div>
-        <div class="announcement-manager-item-actions">
-          <button type="button" class="secondary-button" data-action="edit" data-id="${announcement.id}">Edit</button>
-          <button type="button" class="danger-button" data-action="delete" data-id="${announcement.id}">Delete</button>
-        </div>
-      `;
+
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "announcement-manager-item-content";
+
+      const titleEl = document.createElement("h5");
+      titleEl.textContent = announcement.title;
+
+      const messageEl = document.createElement("p");
+      messageEl.textContent = announcement.message;
+
+      const datesDiv = document.createElement("div");
+      datesDiv.className = "announcement-manager-dates";
+
+      const startsSpan = document.createElement("span");
+      startsSpan.textContent = `Starts: ${startsLabel}`;
+
+      const expiresSpan = document.createElement("span");
+      expiresSpan.textContent = `Expires: ${formatAnnouncementDate(announcement.expires_at)}`;
+
+      datesDiv.appendChild(startsSpan);
+      datesDiv.appendChild(expiresSpan);
+      contentDiv.appendChild(titleEl);
+      contentDiv.appendChild(messageEl);
+      contentDiv.appendChild(datesDiv);
+
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "announcement-manager-item-actions";
+
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "secondary-button";
+      editButton.dataset.action = "edit";
+      editButton.dataset.id = announcement.id;
+      editButton.textContent = "Edit";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "danger-button";
+      deleteButton.dataset.action = "delete";
+      deleteButton.dataset.id = announcement.id;
+      deleteButton.textContent = "Delete";
+
+      actionsDiv.appendChild(editButton);
+      actionsDiv.appendChild(deleteButton);
+
+      item.appendChild(contentDiv);
+      item.appendChild(actionsDiv);
 
       announcementManagerList.appendChild(item);
     });
@@ -207,11 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '<p class="announcements-loading">Loading all announcements...</p>';
 
     try {
-      const response = await fetch(
-        `/announcements/manage?teacher_username=${encodeURIComponent(
-          currentUser.username
-        )}`
-      );
+      const response = await fetch("/announcements/manage");
 
       if (!response.ok) {
         const result = await response.json();
@@ -408,7 +445,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Logout function
-  function logout() {
+  async function logout() {
+    try {
+      await fetch("/auth/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
     currentUser = null;
     localStorage.removeItem("currentUser");
     updateAuthUI();
@@ -1094,9 +1136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         async () => {
           try {
             const response = await fetch(
-              `/announcements/${encodeURIComponent(
-                announcementId
-              )}?teacher_username=${encodeURIComponent(currentUser.username)}`,
+              `/announcements/${encodeURIComponent(announcementId)}`,
               {
                 method: "DELETE",
               }
@@ -1141,10 +1181,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const existingId = announcementIdInput.value;
     const endpoint = existingId
-      ? `/announcements/${encodeURIComponent(existingId)}?teacher_username=${encodeURIComponent(
-          currentUser.username
-        )}`
-      : `/announcements?teacher_username=${encodeURIComponent(currentUser.username)}`;
+      ? `/announcements/${encodeURIComponent(existingId)}`
+      : "/announcements";
     const method = existingId ? "PUT" : "POST";
 
     try {
