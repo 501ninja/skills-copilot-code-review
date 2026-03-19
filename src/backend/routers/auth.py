@@ -2,8 +2,9 @@
 Authentication endpoints for the High School Management System API
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from typing import Dict, Any
+import os
 
 from ..database import teachers_collection, verify_password
 
@@ -12,9 +13,13 @@ router = APIRouter(
     tags=["auth"]
 )
 
+# Cookie lifetime and security settings
+_SESSION_MAX_AGE = 60 * 60 * 24 * 7  # 7 days in seconds
+_SECURE_COOKIES = os.environ.get("SECURE_COOKIES", "false").lower() == "true"
+
 
 @router.post("/login")
-def login(username: str, password: str) -> Dict[str, Any]:
+def login(username: str, password: str, response: Response) -> Dict[str, Any]:
     """Login a teacher account"""
     # Find the teacher in the database
     teacher = teachers_collection.find_one({"_id": username})
@@ -24,12 +29,29 @@ def login(username: str, password: str) -> Dict[str, Any]:
         raise HTTPException(
             status_code=401, detail="Invalid username or password")
 
+    # Set an HttpOnly session cookie so the browser sends it automatically
+    response.set_cookie(
+        key="session_user",
+        value=username,
+        httponly=True,
+        samesite="strict",
+        secure=_SECURE_COOKIES,
+        max_age=_SESSION_MAX_AGE,
+    )
+
     # Return teacher information (excluding password)
     return {
         "username": teacher["username"],
         "display_name": teacher["display_name"],
         "role": teacher["role"]
     }
+
+
+@router.post("/logout")
+def logout(response: Response) -> Dict[str, str]:
+    """Logout the current teacher, clearing the session cookie"""
+    response.delete_cookie(key="session_user", httponly=True, samesite="strict", secure=_SECURE_COOKIES)
+    return {"message": "Logged out"}
 
 
 @router.get("/check-session")

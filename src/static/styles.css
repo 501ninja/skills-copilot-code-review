@@ -433,7 +433,8 @@ button {
 }
 
 .close-modal,
-.close-login-modal {
+.close-login-modal,
+.close-announcement-manager {
   position: absolute;
   right: 12px;
   top: 8px;
@@ -622,6 +623,9 @@ footer {
 #user-status {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 #user-info {
@@ -664,10 +668,226 @@ footer {
 #logout-button:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }
-.announcement-banner {
-  background-color: var(--success);
-  color: white;
-  text-align: center;
-  padding: 15px;
-  font-weight: bold;
+
+#announcements-board {
+  margin-bottom: 15px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #fffdf6, #f9f4e8);
+}
+
+.announcements-header {
+  margin-bottom: 12px;
+}
+
+.announcements-header h3 {
+  margin-bottom: 4px;
+}
+
+.announcements-header p {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.announcements-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.announcement-card {
+  border: 1px solid #f0d9b6;
+  border-left: 4px solid var(--secondary);
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  animation: announcementFadeIn 0.35s ease;
+}
+
+.announcement-card h4 {
+  color: var(--primary);
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.announcement-card p {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.announcement-date {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #9b4b00;
+  margin-bottom: 6px;
+}
+
+.announcements-loading,
+.announcements-empty {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.announcement-manager-content {
+  max-width: 900px;
+  width: min(92vw, 900px);
+  max-height: 88vh;
+  overflow: auto;
+}
+
+.announcement-manager-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+}
+
+.announcement-manager-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.announcement-form-pane,
+.announcement-list-pane {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: #fcfcfc;
+}
+
+.announcement-form-pane h4,
+.announcement-list-pane h4 {
+  margin-bottom: 10px;
+  color: var(--primary);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.form-group input,
+.form-group textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.12);
+}
+
+.announcement-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.secondary-button {
+  background-color: #eef1ff;
+  color: var(--primary);
+  border: 1px solid #d0d7ff;
+}
+
+.secondary-button:hover {
+  background-color: #dde3ff;
+}
+
+.danger-button {
+  background-color: #ffe5e5;
+  color: #9a1a1a;
+  border: 1px solid #f3bbbb;
+}
+
+.danger-button:hover {
+  background-color: #ffd8d8;
+}
+
+.announcement-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.announcement-manager-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.announcement-manager-item-content h5 {
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.announcement-manager-item-content p {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.announcement-manager-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.announcement-manager-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@keyframes announcementFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) {
+  #user-controls {
+    position: static;
+    margin-top: 10px;
+  }
+
+  .announcement-manager-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .announcement-manager-item {
+    flex-direction: column;
+  }
+
+  .announcement-manager-item-actions {
+    flex-direction: row;
+  }
 }
